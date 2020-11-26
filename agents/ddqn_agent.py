@@ -23,38 +23,40 @@ class DDQNAgent():
                  training=True,
                  policy=None,
                  gamma=.99,
-                 learning_rate=.001,
                  actions=None,
                  memory=None,
                  memory_interval=1,
+                 model=None,
+                 target_model=None,
                  update_interval=100,
                  train_interval=1,
                  batch_size=32,
-                 nb_steps_warmup=200,
+                 warmup_steps=200,
                  observation=None,
-                 input_shape=None,
-                 obs_processer=None):
+                 obs_processor=None,
+                 loss_fn=None,
+                 optimizer=None):
 
         self.training = training
         self.policy = policy
         self.actions = actions
         self.gamma = gamma
-        self.learning_rate = learning_rate
-        self.obs_processer = obs_processer
-        self.recent_action_id = None
-        self.recent_observation = self.obs_processer(observation)
-        self.previous_observation = None
+        self.obs_processor = obs_processor
+        self.observation = self.obs_processor(observation)
+        self.prev_observation = None
         self.memory = memory
         self.memory_interval = memory_interval
         self.batch_size = batch_size
-        self.nb_steps_warmup = nb_steps_warmup
-        self.model = build_model(input_shape, len(self.actions))
-        self.target_model = build_model(input_shape, len(self.actions))
-        self.nb_actions = len(self.actions)
+        self.warmup_steps = warmup_steps
+        self.model = model
+        self.target_model = target_model
         self.train_interval = train_interval
-        self.step = 0
-        self.trainable_model = None
         self.update_interval = update_interval
+
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+
+        self.step = 0
 
     def compile(self):
         mask = tf.keras.layers.Input(name="mask", shape=(self.nb_actions, ))
@@ -126,15 +128,21 @@ class DDQNAgent():
             discounted_reward_batch *= terminal_batch
 
             targets = reward_batch + discounted_reward_batch
-            mask = np.zeros((len(action_batch), len(self.actions)))
-            target_batch = np.zeros((self.batch_size, len(self.actions)))
-            for idx, (action, target) in enumerate(zip(action_batch, targets)):
-                target_batch[idx][action] = target
-                mask[idx][action] = 1.
+            
+            # mask = np.zeros((len(action_batch), len(self.actions)))
+            # target_batch = np.zeros((self.batch_size, len(self.actions)))
+            # for idx, (action, target) in enumerate(zip(action_batch, targets)):
+            #     target_batch[idx][action] = target
+            #     mask[idx][action] = 1.
+            #
+            # self.train_on_batch(state0_batch,
+            #                     mask,
+            #                     target_batch)
+            mask = tf.one_hot(action_batch, 2)
+            targets = tf.math.multiply(targets, mask)
+            state0_batch = tf.convert_to_tensor(state0_batch)
 
-            self.train_on_batch(state0_batch,
-                                mask,
-                                target_batch)
+            self._train_on_batch(state0_batch, mask, targets)
 
         if self.update_interval > 1:
             # hard update
@@ -143,10 +151,17 @@ class DDQNAgent():
             # soft update
             self.update_target_model_soft()
 
-    def train_on_batch(self, state_batch, mask, targets):
-        state_batch = np.array(state_batch)
-        self.trainable_model.train_on_batch([state_batch, mask],
-                                            [targets])
+    @tf.function
+    def _train_on_batch(self, states, masks, targets):
+        with tf.GradientTape() as tape:
+            y_preds = self.model(states)
+            y_preds = tf.math.multiply(y_preds, masks)
+            loss_value = self.loss_fn(targets, y_preds)
+
+        grads = tape.gradient(loss_value, self.model.trainable_weights)
+
+        self.optimizer.apply_gradients(
+            zip(grads, self.model.trainable_weights))
 
     def predict_on_batch_by_model(self, state1_batch):
         state1_batch = np.array(state1_batch)
