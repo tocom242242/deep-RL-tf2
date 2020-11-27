@@ -24,7 +24,8 @@ class DQNAgent():
                  observation=None,
                  obs_processor=None,
                  loss_fn=None,
-                 optimizer=None):
+                 optimizer=None, 
+                 is_ddqn=False):
 
         self.training = training
         self.policy = policy
@@ -41,6 +42,7 @@ class DQNAgent():
         self.target_model = target_model
         self.train_interval = train_interval
         self.update_interval = update_interval
+        self.is_ddqn = is_ddqn
 
         self.loss_fn = loss_fn
         self.optimizer = optimizer
@@ -97,16 +99,25 @@ class DQNAgent():
             reward_batch = np.array(reward_batch).reshape(-1, 1)
             terminal_batch = np.array(terminal_batch).reshape(-1, 1)
 
-            target_q_values = self._predict_on_batch(state1_batch)
+            target_q_values = self._predict_on_batch(state1_batch, self.target_model)
 
             discounted_reward_batch = self.gamma * target_q_values * terminal_batch
             targets = reward_batch + discounted_reward_batch
 
+            targets_one_hot = np.zeros((len(targets),2))
+            if self.is_ddqn:
+                q_values = self._predict_on_batch(state1_batch, self.model)
+                argmax_actions = np.argmax(q_values, axis=1)
+                for idx, (action, argmax_action) in enumerate(zip(action_batch, argmax_actions)):
+                    targets_one_hot[idx][action] = targets[idx][argmax_action]
+            else:
+                for idx, action in enumerate(action_batch):
+                    targets_one_hot[idx][action] = max(targets[idx])
+
             mask = tf.one_hot(action_batch, 2)
-            targets = tf.math.multiply(targets, mask)
             state0_batch = tf.convert_to_tensor(state0_batch)
 
-            self._train_on_batch(state0_batch, mask, targets)
+            self._train_on_batch(state0_batch, mask, targets_one_hot)
 
         if self.update_interval > 1:
             # hard update
@@ -115,7 +126,7 @@ class DQNAgent():
             # soft update
             self._soft_update_target_model()
 
-    @tf.function
+    # @tf.function
     def _train_on_batch(self, states, masks, targets):
         with tf.GradientTape() as tape:
             y_preds = self.model(states)
@@ -127,9 +138,9 @@ class DQNAgent():
         self.optimizer.apply_gradients(
             zip(grads, self.model.trainable_weights))
 
-    def _predict_on_batch(self, state1_batch):
+    def _predict_on_batch(self, state1_batch, model):
         state1_batch = np.array(state1_batch)
-        q_values = self.target_model.predict(state1_batch)
+        q_values = model.predict(state1_batch)
         return q_values
 
     def _compute_q_values(self, state):

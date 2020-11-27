@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from copy import deepcopy
 from agents.dqn_agent import DQNAgent
-# from ddqn_agent import DDQNAgent
+# from agents.ddqn_agent import DDQNAgent
 from agents.policy import EpsGreedyQPolicy
 from agents.memory import Memory
 
@@ -56,7 +56,8 @@ agent = DQNAgent(actions=actions,
                  policy=policy,
                  loss_fn=loss_fn,
                  optimizer=optimizer,
-                 obs_processor=obs_processor)
+                 obs_processor=obs_processor, 
+                 is_ddqn=False)
 
 step_history = []
 nb_epsiodes = 1000
