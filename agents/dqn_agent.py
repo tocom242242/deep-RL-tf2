@@ -99,15 +99,6 @@ class DQNAgent():
             reward_batch = np.array(reward_batch).reshape(-1, 1)
             terminal_batch = np.array(terminal_batch).reshape(-1, 1)
 
-            # if self.is_ddqn:
-            #     q_values = self._predict_on_batch(state1_batch, self.model)
-            #     argmax_actions = np.argmax(q_values, axis=1)
-            #     target_q_values = self._predict_on_batch(state1_batch, self.target_model)
-            #     double_q_values = []
-            #     for a, t in zip(argmax_actions, target_q_values):
-            #         double_q_values.append(t[a])
-            #     target_q_values = np.array(double_q_values)
-            # else:
             target_q_values = self._predict_on_batch(state1_batch, self.target_model)
 
             discounted_reward_batch = self.gamma * target_q_values * terminal_batch
