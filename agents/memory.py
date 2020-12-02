@@ -1,5 +1,5 @@
 ﻿import random
-import numpy
+import numpy as np
 from collections import deque, namedtuple
 
 Experience = namedtuple(
