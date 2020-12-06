@@ -1,4 +1,5 @@
-﻿import gym
+﻿import tqdm
+import gym
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -63,45 +64,35 @@ agent = DQNAgent(actions=actions,
 
 step_history = []
 nb_epsiodes = 1000
-for episode in range(nb_epsiodes):
-    # agent.reset()
-    observation = env.reset()
-    observation = deepcopy(observation)
-    agent.observe(observation)
-    done = False
-
-    # train
-    while not done:
-        action = agent.act()
-        observation, reward, done, info = env.step(action)
+with tqdm.trange(nb_epsiodes) as t:
+    for episode in t:
+        # agent.reset()
+        observation = env.reset()
         observation = deepcopy(observation)
-        agent.observe(observation, reward, done)
-        if done:
-            break
-
-    # evaluate
-    agent.training = False
-    observation = env.reset()
-    agent.observe(observation)
-    done = False
-    step = 0
-    while not done:
-        # env.render()
-        step += 1
-        action = agent.act()
-        observation, reward, done, info = env.step(action)
         agent.observe(observation)
-        if done:
-            print('Episode {}: {} steps'.format(episode, step))
-            step_history.append(step)
+        done = False
+        step = 0
+        episode_reward_history = []
+        # train
+        while not done:
+            action = agent.act()
+            observation, reward, done, info = env.step(action)
+            step += 1
+            observation = deepcopy(observation)
+            episode_reward_history.append(reward)
+            agent.observe(observation, reward, done)
+            if done:
+                t.set_description('Episode {}: {} steps'.format(episode, step))
+                t.set_postfix(episode_reward=np.sum(episode_reward_history))
+                step_history.append(step)
+                break
+
+        # if last step is bigger than 195, stop the game.
+        if all(np.array(step_history[-10:]) >= (env.spec.max_episode_steps - 5)):
+            print('Problem is solved in {} episodes.'.format(episode))
             break
 
-    # if last step is bigger than 195, stop the game.
-    if all(np.array(step_history[-10:]) >= (env.spec.max_episode_steps - 5)):
-        print('Problem is solved in {} episodes.'.format(episode))
-        break
-
-    agent.training = True
+        agent.training = True
 
 env.close()
 x = np.arange(len(step_history))
