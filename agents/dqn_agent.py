@@ -63,6 +63,7 @@ class DQNAgent():
                 self.memory.append(self.prev_observation,
                                    self.recent_action_id,
                                    reward,
+                                   observation, 
                                    terminal=is_terminal)
             self._experience_replay()
             self.policy.decay_eps_rate()
@@ -81,23 +82,10 @@ class DQNAgent():
         if self.step > self.warmup_steps \
                 and self.step % self.train_interval == 0:
 
-            experiences = self.memory.sample(self.batch_size)
+            state0_batch, action_batch, reward_batch, state1_batch, terminal_batch  = self.memory.sample(self.batch_size)
 
-            state0_batch = []
-            reward_batch = []
-            action_batch = []
-            state1_batch = []
-            terminal_batch = []
-
-            for e in experiences:
-                state0_batch.append(e.state0)
-                state1_batch.append(e.state1)
-                reward_batch.append(e.reward)
-                action_batch.append(e.action)
-                terminal_batch.append(0. if e.terminal else 1.)
-
-            reward_batch = np.array(reward_batch).reshape(-1, 1)
-            terminal_batch = np.array(terminal_batch).reshape(-1, 1)
+            reward_batch = reward_batch.reshape(-1, 1)
+            terminal_batch = terminal_batch.reshape(-1, 1)
 
             target_q_values = self._predict_on_batch(state1_batch, self.target_model)
 

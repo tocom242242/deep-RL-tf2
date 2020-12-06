@@ -6,8 +6,8 @@ from copy import deepcopy
 from agents.dqn_agent import DQNAgent
 # from agents.ddqn_agent import DDQNAgent
 from agents.policy import EpsGreedyQPolicy
-# from agents.memory import Memory
-from agents.memory import SequentialMemory
+from agents.memory import RandomMemory
+# from agents.memory import SequentialMemory
 
 
 def obs_processor(raw_obs):
@@ -33,8 +33,8 @@ env.seed(123)
 nb_actions = env.action_space.n
 actions = np.arange(nb_actions)
 policy = EpsGreedyQPolicy(eps=1., eps_decay_rate=.999, min_eps=.01)
-# memory = Memory(limit=50000, maxlen=1)
-memory = SequentialMemory(limit=50000, maxlen=1)
+memory = RandomMemory(limit=50000)
+# memory = SequentialMemory(limit=50000, maxlen=1)
 ini_observation = env.reset()
 loss_fn = tf.keras.losses.Huber()
 optimizer = tf.keras.optimizers.Adam()
