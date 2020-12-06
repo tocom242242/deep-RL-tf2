@@ -12,9 +12,17 @@ def sample_batch_indexes(low, high, size):
 
     return batch_idxs
 
+class Memory():
 
-class Memory:
-    def __init__(self, limit, maxlen):
+    def sample(self, **kwargs):
+        raise NotImplementedError()
+
+    def append(self, **kwargs):
+        raise NotImplementedError()
+
+class RandomMemory(Memory):
+    def __init__(self, limit):
+        super(Memory, self).__init__()
         self.experiences = deque(maxlen=limit)
 
     def sample(self, batch_size):
@@ -40,11 +48,7 @@ class Memory:
         next_state_batch = np.array(next_state_batch)
         terminal_batch = np.array(terminal_batch)
 
-        assert type(state_batch).__module__ == np.__name__
-        assert type(action_batch).__module__ == np.__name__
-        assert type(reward_batch).__module__ == np.__name__
-        assert type(next_state_batch).__module__ == np.__name__
-        assert type(terminal_batch).__module__ == np.__name__
+        assert len(state_batch) == batch_size
         
         return state_batch, action_batch, reward_batch, next_state_batch, terminal_batch
 
