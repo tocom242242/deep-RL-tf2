@@ -92,7 +92,7 @@ class DQNAgent():
             discounted_reward_batch = self.gamma * target_q_values * terminal_batch
             targets = reward_batch + discounted_reward_batch
 
-            targets_one_hot = np.zeros((len(targets),2))
+            targets_one_hot = np.zeros((len(targets), len(self.actions)))
             if self.is_ddqn:
                 q_values = self._predict_on_batch(state1_batch, self.model)
                 argmax_actions = np.argmax(q_values, axis=1)
@@ -102,7 +102,7 @@ class DQNAgent():
                 for idx, action in enumerate(action_batch):
                     targets_one_hot[idx][action] = max(targets[idx])
 
-            mask = tf.one_hot(action_batch, 2)
+            mask = tf.one_hot(action_batch, len(self.actions))
             state0_batch = tf.convert_to_tensor(state0_batch)
 
             self._train_on_batch(state0_batch, mask, targets_one_hot)
