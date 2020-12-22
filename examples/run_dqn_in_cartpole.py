@@ -4,11 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from copy import deepcopy
+
+import sys
+sys.path.append('..')
 from agents.dqn_agent import DQNAgent
 # from agents.ddqn_agent import DDQNAgent
 from agents.policy import EpsGreedyQPolicy
 from agents.memory import RandomMemory
-# from memory import SequentialMemory
+# from agents.memory import SequentialMemory
 
 
 def obs_processor(raw_obs):
@@ -28,13 +31,13 @@ def build_q_network(input_shape, nb_output):
     return model
 
 
-env = gym.make('MountainCar-v0')
+env = gym.make('CartPole-v0')
 np.random.seed(123)
 env.seed(123)
 nb_actions = env.action_space.n
 actions = np.arange(nb_actions)
-policy = EpsGreedyQPolicy(eps=1., eps_decay_rate=.9999, min_eps=.01)
-memory = RandomMemory(limit=10000)
+policy = EpsGreedyQPolicy(eps=1., eps_decay_rate=.999, min_eps=.01)
+memory = RandomMemory(limit=50000)
 # memory = SequentialMemory(limit=50000, maxlen=1)
 ini_observation = env.reset()
 loss_fn = tf.keras.losses.Huber()
@@ -60,13 +63,10 @@ agent = DQNAgent(actions=actions,
                  loss_fn=loss_fn,
                  optimizer=optimizer,
                  obs_processor=obs_processor, 
-                 is_ddqn=True)
+                 is_ddqn=False)
 
 step_history = []
-reward_history = []
 nb_epsiodes = 1000
-# for episode in range(nb_epsiodes):episode_reward_averague
-episode_reward_average = -1
 with tqdm.trange(nb_epsiodes) as t:
     for episode in t:
         # agent.reset()
@@ -74,32 +74,26 @@ with tqdm.trange(nb_epsiodes) as t:
         observation = deepcopy(observation)
         agent.observe(observation)
         done = False
-        episode_reward = []
         step = 0
+        episode_reward_history = []
         # train
         while not done:
             action = agent.act()
             observation, reward, done, info = env.step(action)
+            step += 1
             observation = deepcopy(observation)
-            # reward = observation[0]
+            episode_reward_history.append(reward)
+            agent.observe(observation, reward, done)
             if done:
-                if step < 199:
-                    reward = 100
-                agent.observe(observation, reward, done)
-                episode_reward.append(reward)
-
-                episode_reward_average = 0.01*np.mean(episode_reward) + 0.99*episode_reward_average
-                reward_history.append(np.mean(episode_reward))
-                t.set_description('Episode {}, steps:{}, reward:{} '.format(episode, step, np.mean(episode_reward)))
-                t.set_postfix(episode_reward=episode_reward_average)
+                t.set_description('Episode {}: {} steps'.format(episode, step))
+                t.set_postfix(episode_reward=np.sum(episode_reward_history))
                 step_history.append(step)
                 break
-            else:
-                agent.observe(observation, reward, done)
-                episode_reward.append(reward)
 
-            step += 1
-
+        # if last step is bigger than 195, stop the game.
+        if all(np.array(step_history[-10:]) >= (env.spec.max_episode_steps - 5)):
+            print('Problem is solved in {} episodes.'.format(episode))
+            break
 
         agent.training = True
 
