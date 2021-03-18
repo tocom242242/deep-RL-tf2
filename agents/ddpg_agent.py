@@ -23,8 +23,7 @@ class DDPGAgent():
                  observation=None,
                  obs_processor=None,
                  loss_fn=None,
-                 optimizer=None, 
-                 is_ddqn=False):
+                 optimizer=None):
 
         self.training = training
         self.policy = policy
@@ -43,7 +42,6 @@ class DDPGAgent():
         self.target_critic = target_critic
         self.train_interval = train_interval
         self.update_interval = update_interval
-        self.is_ddqn = is_ddqn
 
         self.loss_fn = loss_fn
         self.optimizer = optimizer
