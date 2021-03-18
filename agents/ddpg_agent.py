@@ -86,25 +86,8 @@ class DDPGAgent():
             reward_batch = reward_batch.reshape(-1, 1)
             terminal_batch = terminal_batch.reshape(-1, 1)
 
-            target_q_values = self._predict_on_batch(state1_batch, self.target_model)
-
-            discounted_reward_batch = self.gamma * target_q_values * terminal_batch
-            targets = reward_batch + discounted_reward_batch
-
-            targets_one_hot = np.zeros((len(targets), len(self.actions)))
-            if self.is_ddqn:
-                q_values = self._predict_on_batch(state1_batch, self.model)
-                argmax_actions = np.argmax(q_values, axis=1)
-                for idx, (action, argmax_action) in enumerate(zip(action_batch, argmax_actions)):
-                    targets_one_hot[idx][action] = targets[idx][argmax_action]
-            else:
-                for idx, action in enumerate(action_batch):
-                    targets_one_hot[idx][action] = max(targets[idx])
-
-            mask = tf.one_hot(action_batch, len(self.actions))
-            state0_batch = tf.convert_to_tensor(state0_batch)
-
-            self._train_on_batch(state0_batch, mask, targets_one_hot)
+            self._train_critic(state0_batch, action_batch, reward_batch, state1_batch)
+            self._train_actor(state0_batch, action_batch, reward_batch, state1_batch)
 
         if self.update_interval > 1:
             # hard update
@@ -113,9 +96,38 @@ class DDPGAgent():
             # soft update
             self._soft_update_target_model()
 
+    @tf.function
+    def _train_critic(self, state0_batch, action_batch, reward_batch, state1_batch):
+
+        with tf.GradientTape() as tape:
+            target_actions = self.target_actor(state1_batch, training=True)
+            y = reward_batch+self.gamma*self.target_critic([state1_batch, target_actions], training=True)
+            critic_value = self.critic([state0_batch, action_batch], training=True)
+            critic_loss = tf.math.reduce_mean(tf.math.square(y-critic_loss))
+
+        critic_grad = tape.gradient(critic_loss, self.critic_model.trainable_variables)
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
+
+    @tf.function
+    def _train_actor(self, state0_batch, action_batch, reward_batch, state1_batch):
+
+        with tf.GradientTape() as tape:
+            actions = self.actor(state_batch, training=True)
+            critic_value = self.critic([state0_batch, actions], training=True)
+
+            actor_loss = - tf.math.reduce_mean(critic_value)
+
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+
+
+
     # @tf.function
     def _train_on_batch(self, states, masks, targets):
         with tf.GradientTape() as tape:
+            # target_actions = self.target_actor(states, training=True)
+
+
             y_preds = self.model(states)
             y_preds = tf.math.multiply(y_preds, masks)
             loss_value = self.loss_fn(targets, y_preds)
@@ -137,14 +149,21 @@ class DDPGAgent():
     def _hard_update_target_model(self):
         """ for hard update """
         if self.step % self.update_interval == 0:
-            self.target_model.set_weights(self.model.get_weights())
+            self.target_critic.set_weights(self.critic.get_weights())
+            self.target_actor.set_weights(self.actor.get_weights())
 
     def _soft_update_target_model(self):
-        target_model_weights = np.array(self.target_model.get_weights())
-        model_weights = np.array(self.model.get_weights())
-        new_weight = (1. - self.update_interval) * target_model_weights \
-            + self.update_interval * model_weights
-        self.target_model.set_weights(new_weight)
+        target_critic_weights = np.array(self.target_critic.get_weights())
+        critic_weights = np.array(self.critic.get_weights())
+        new_weight = (1. - self.update_interval) * target_critic_weights \
+            + self.update_interval * critic_weights
+        self.target_critic.set_weights(new_weight)
+
+        target_actor_weights = np.array(self.target_actor.get_weights())
+        actor_weights = np.array(self.actor.get_weights())
+        new_weight = (1. - self.update_interval) * target_actor_weights \
+            + self.update_interval * actor_weights
+        self.target_actor.set_weights(new_weight)
 
     def reset(self):
         self.observation = None
