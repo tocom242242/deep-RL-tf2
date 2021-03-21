@@ -83,16 +83,6 @@ class OUActionNoise:
         self.x_prev = x
         return x
 
-    def __call__(self):
-        x = (
-            self.x_prev
-            + self.theta * (self.mean - self.x_prev) * self.dt
-            + self.std_dev * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
-        )
-
-        self.x_prev = x
-        return x
-
     def reset(self):
         if self.x_initial is not None:
             self.x_prev = self.x_initial

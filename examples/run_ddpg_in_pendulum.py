@@ -1,21 +1,16 @@
-from ddpg_agent import DDPGAgent
-import policy
-import memorys
+import sys #nopep
+sys.path.append('..')#nopep
+
 import gym
 import numpy as np
 import tqdm
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from copy import deepcopy
-import sys
-sys.path.append('..')
 
-# from agents.dqn_agent import DQNAgent
-# from agents.ddqn_agent import DDQNAgent
-# from agents.ddpg_agent import DDPGAgent
-# import agents.policy as policy
-# from agents.memory import RandomMemory
-# from agents.memory import SequentialMemory
+from agents.ddpg_agent import DDPGAgent
+import agents.policy as policy
+import agents.memorys as memorys
 
 
 def obs_processor(raw_obs):
