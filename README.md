@@ -1,5 +1,6 @@
 # Deep Reinforcement Learning with Tensorflow 2.0
 
+
 ## How to run example
 
 ### Clone 
@@ -9,6 +10,7 @@ First, clone this repository and move to the repository.
 ### Install packages
 
 ```
+cd deep-RL-tf2
 pip install -r requirements.txt
 ```
 
