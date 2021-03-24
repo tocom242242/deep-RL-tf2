@@ -61,6 +61,26 @@ class RandomMemory(Memory):
 
         self.experiences.append((state, action, reward, next_state, terminal))
 
+class EpisodeMemory(Memory):
+    def __init__(self, limit):
+        super(Memory, self).__init__()
+        self.episodes = deque(maxlen=limit) # [episode1(e0, e1, ...), episode2, ...]
+
+
+    def append(self, episode):
+        self.episodes.append(episode)
+
+    def sample(self, batch_size, time_step):
+        batch_size = min(batch_size, len(self.episodes))
+        sampled_episodes = random.sample(self.episodes, batch_size)
+        mini_batch = []
+
+        for episode in sampled_episodes:
+            point = np.random.randint(0, len(episode)+1-time_step)
+            mini_batch.append(episode[point:point+time_step])
+
+        return mini_batch
+
 
 
 class SequentialMemory:
