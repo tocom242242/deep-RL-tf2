@@ -50,7 +50,11 @@ class DQNAgent():
         self.step = 0
 
     def act(self):
-        action_id = self._forward()
+        q_values = self.target_model(np.array([self.observation]))
+        q_values = tf.squeeze(q_values)
+        action_id = self.policy.select_action(
+            q_values=q_values, is_training=self.training)
+        self.recent_action_id = action_id
         action = self.actions[action_id]
         return action
 
@@ -70,14 +74,6 @@ class DQNAgent():
 
         self.step += 1
 
-    def _forward(self):
-        q_values = self._compute_q_values(self.observation)
-        action_id = self.policy.select_action(
-            q_values=q_values, is_training=self.training)
-        self.recent_action_id = action_id
-
-        return action_id
-
     def _experience_replay(self):
         if self.step > self.warmup_steps \
                 and self.step % self.train_interval == 0:
@@ -87,14 +83,14 @@ class DQNAgent():
             reward_batch = reward_batch.reshape(-1, 1)
             terminal_batch = terminal_batch.reshape(-1, 1)
 
-            target_q_values = self._predict_on_batch(state1_batch, self.target_model)
+            target_q_values = self.target_model(state1_batch)
 
             discounted_reward_batch = self.gamma * target_q_values * terminal_batch
             targets = reward_batch + discounted_reward_batch
 
             targets_one_hot = np.zeros((len(targets), len(self.actions)))
             if self.is_ddqn:
-                q_values = self._predict_on_batch(state1_batch, self.model)
+                q_values = self.model(state1_batch)
                 argmax_actions = np.argmax(q_values, axis=1)
                 for idx, (action, argmax_action) in enumerate(zip(action_batch, argmax_actions)):
                     targets_one_hot[idx][action] = targets[idx][argmax_action]
@@ -125,15 +121,6 @@ class DQNAgent():
 
         self.optimizer.apply_gradients(
             zip(grads, self.model.trainable_weights))
-
-    def _predict_on_batch(self, state1_batch, model):
-        state1_batch = np.array(state1_batch)
-        q_values = model.predict(state1_batch)
-        return q_values
-
-    def _compute_q_values(self, state):
-        q_values = self.target_model.predict(np.array([state]))
-        return q_values[0]
 
     def _hard_update_target_model(self):
         """ for hard update """

@@ -10,7 +10,7 @@ sys.path.append('..')
 from agents.dqn_agent import DQNAgent
 # from agents.ddqn_agent import DDQNAgent
 from agents.policy import EpsGreedyQPolicy
-from agents.memory import RandomMemory
+from agents.memorys import RandomMemory
 # from agents.memory import SequentialMemory
 
 
