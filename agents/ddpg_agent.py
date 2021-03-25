@@ -89,12 +89,8 @@ class DDPGAgent():
                 reward_batch,
                 state1_batch)
 
-        if self.update_interval > 1:
-            # hard update
-            self._hard_update_target_model()
-        else:
-            # soft update
-            self._soft_update_target_model()
+        # soft update
+        self._soft_update_target_model()
 
     # @tf.function
     def _train_critic(
@@ -134,12 +130,6 @@ class DDPGAgent():
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self.actor_optimizer.apply_gradients(
             zip(actor_grad, self.actor.trainable_variables))
-
-    def _hard_update_target_model(self):
-        """ for hard update """
-        if self.step % self.update_interval == 0:
-            self.target_critic.set_weights(self.critic.get_weights())
-            self.target_actor.set_weights(self.actor.get_weights())
 
     def _soft_update_target_model(self):
         target_critic_weights = np.array(self.target_critic.get_weights())
