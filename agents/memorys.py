@@ -70,14 +70,37 @@ class EpisodeMemory(Memory):
     def append(self, episode):
         self.episodes.append(episode)
 
-    def sample(self, batch_size, time_step):
+    def sample(self, batch_size, time_step=8):
         batch_size = min(batch_size, len(self.episodes))
         sampled_episodes = random.sample(self.episodes, batch_size)
         mini_batch = []
 
         for episode in sampled_episodes:
-            point = np.random.randint(0, len(episode)+1-time_step)
-            mini_batch.append(episode[point:point+time_step])
+            # point = np.random.randint(0, len(episode)+1-time_step)
+            if len(episode) <= time_step:
+                point = 0
+                time_step = len(episode)
+            else:
+                point = np.random.randint(0, len(episode)-time_step)
+
+            state_batch = []
+            action_batch = []
+            reward_batch = []
+            next_state_batch = []
+            terminal_batch = []
+            for state, action, reward, next_state, done in episode[point:point+time_step]:
+                state_batch.append(state)
+                action_batch.append(action)
+                reward_batch.append(reward)
+                next_state_batch.append(next_state)
+                terminal_batch.append(0. if done else 1.)
+            state_batch = np.array(state_batch)
+            action_batch = np.array(action_batch)
+            reward_batch = np.array(reward_batch)
+            next_state_batch = np.array(next_state_batch)
+            terminal_batch = np.array(terminal_batch)
+
+            mini_batch.append((state_batch, action_batch, reward_batch, next_state_batch, terminal_batch))
 
         return mini_batch
 
