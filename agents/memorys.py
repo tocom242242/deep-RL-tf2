@@ -2,15 +2,6 @@
 import numpy as np
 from collections import deque, namedtuple
 
-Experience = namedtuple(
-    'Experience', 'state0, action, reward, state1, terminal')
-
-
-def sample_batch_indexes(low, high, size):
-    r = range(low, high)
-    batch_idxs = random.sample(r, size)
-
-    return batch_idxs
 
 class Memory():
 
@@ -19,6 +10,7 @@ class Memory():
 
     def append(self, **kwargs):
         raise NotImplementedError()
+
 
 class RandomMemory(Memory):
     def __init__(self, limit):
@@ -49,7 +41,7 @@ class RandomMemory(Memory):
         terminal_batch = np.array(terminal_batch)
 
         assert len(state_batch) == batch_size
-        
+
         return state_batch, action_batch, reward_batch, next_state_batch, terminal_batch
 
     def append(self, state, action, reward, next_state, terminal=False):
@@ -61,11 +53,11 @@ class RandomMemory(Memory):
 
         self.experiences.append((state, action, reward, next_state, terminal))
 
+
 class EpisodeMemory(Memory):
     def __init__(self, limit):
         super(Memory, self).__init__()
-        self.episodes = deque(maxlen=limit) # [episode1(e0, e1, ...), episode2, ...]
-
+        self.episodes = deque(maxlen=limit)  # [episode1(e0, e1, ...), episode2, ...]
 
     def append(self, episode):
         self.episodes.append(episode)
@@ -81,14 +73,14 @@ class EpisodeMemory(Memory):
                 point = 0
                 time_step = len(episode)
             else:
-                point = np.random.randint(0, len(episode)-time_step)
+                point = np.random.randint(0, len(episode) - time_step)
 
             state_batch = []
             action_batch = []
             reward_batch = []
             next_state_batch = []
             terminal_batch = []
-            for state, action, reward, next_state, done in episode[point:point+time_step]:
+            for state, action, reward, next_state, done in episode[point:point + time_step]:
                 state_batch.append(state)
                 action_batch.append(action)
                 reward_batch.append(reward)
@@ -103,55 +95,3 @@ class EpisodeMemory(Memory):
             mini_batch.append((state_batch, action_batch, reward_batch, next_state_batch, terminal_batch))
 
         return mini_batch
-
-
-
-class SequentialMemory:
-    def __init__(self, limit, maxlen):
-        self.actions = deque(maxlen=limit)
-        self.rewards = deque(maxlen=limit)
-        self.terminals = deque(maxlen=limit)
-        self.observations = deque(maxlen=limit)
-        self.maxlen = maxlen
-        self.recent_observations = deque(maxlen=maxlen)
-
-    def sample(self, batch_size):
-        batch_idxs = []
-        all_idxs = np.arange(0, len(self.observations)-1)
-        while True:
-            idx = np.random.choice(all_idxs)
-            terminal = self.terminals[idx-1]
-            while terminal is False and len(batch_idxs) < batch_size:
-                batch_idxs.append(idx)
-                # print(idx)
-                # print(len(batch_idxs))
-                all_idxs = all_idxs[all_idxs != idx]
-                idx=idx+1
-                if idx <= len(self.observations):
-                    break
-                terminal = self.terminals[idx-1]
-
-            if len(batch_idxs) >= batch_size:
-                break
-
-        experiences = []
-        for idx in batch_idxs:
-            state0 = self.observations[idx]
-            action = self.actions[idx]
-            reward = self.rewards[idx]
-            terminal = self.terminals[idx]
-            state1 = self.observations[idx+1]
-            experiences.append(Experience(state0=state0,
-                                          action=action,
-                                          reward=reward,
-                                          state1=state1,
-                                          terminal=terminal))
-
-        return experiences
-
-    def append(self, observation, action, reward, terminal=False):
-        self.observations.append(observation)
-        self.actions.append(action)
-        self.rewards.append(reward)
-        self.terminals.append(terminal)
-        self.recent_observations.append(observation)
