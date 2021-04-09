@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from copy import deepcopy
 
-# import sys
-# sys.path.append('..')
-# import agents.memorys as memorys
-# from agents.policies import EpsGreedyQPolicy
-# from agents.drqn_agent import DRQNAgent
+import sys
+sys.path.append('..')
+import agents.memorys as memorys
+from agents.policies import EpsGreedyQPolicy
+from agents.drqn_agent import DRQNAgent
 
-from drqn_agent import DRQNAgent
-from policies import EpsGreedyQPolicy
-import memorys as memorys
+# from drqn_agent import DRQNAgent
+# from policies import EpsGreedyQPolicy
+# import memorys as memorys
 
 
 def obs_processor(raw_obs):
