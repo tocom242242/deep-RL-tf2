@@ -8,10 +8,12 @@ from copy import deepcopy
 import sys
 sys.path.append('..')
 from agents.dqn_agent import DQNAgent
-# from agents.ddqn_agent import DDQNAgent
-from agents.policy import EpsGreedyQPolicy
+from agents.policies import EpsGreedyQPolicy
 from agents.memorys import RandomMemory
-# from agents.memory import SequentialMemory
+
+# from dqn_agent import DQNAgent
+# from policies import EpsGreedyQPolicy
+# from memorys import RandomMemory
 
 
 def obs_processor(raw_obs):
@@ -71,7 +73,6 @@ with tqdm.trange(nb_epsiodes) as t:
     for episode in t:
         # agent.reset()
         observation = env.reset()
-        observation = deepcopy(observation)
         agent.observe(observation)
         done = False
         step = 0
@@ -81,12 +82,17 @@ with tqdm.trange(nb_epsiodes) as t:
             action = agent.act()
             observation, reward, done, info = env.step(action)
             step += 1
-            observation = deepcopy(observation)
             episode_reward_history.append(reward)
             agent.observe(observation, reward, done)
+
             if done:
                 t.set_description('Episode {}: {} steps'.format(episode, step))
                 t.set_postfix(episode_reward=np.sum(episode_reward_history))
+
+                if episode > 3:
+                    agent.train()
+                    if episode % 5 == 0:
+                        agent.update_target_hard()
                 step_history.append(step)
                 break
 

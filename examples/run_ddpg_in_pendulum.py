@@ -111,7 +111,6 @@ agent = DDPGAgent(
 with tqdm.trange(nb_epsiodes) as t:
     for episode in t:
         observation = env.reset()
-        observation = deepcopy(observation)
         agent.observe(observation)
         done = False
         step = 0
@@ -120,7 +119,6 @@ with tqdm.trange(nb_epsiodes) as t:
             action = agent.act()
             observation, reward, done, info = env.step([action])
             step += 1
-            observation = deepcopy(observation)
             episode_reward_history.append(reward)
             agent.observe(observation, reward, done)
             if done:
@@ -128,6 +126,9 @@ with tqdm.trange(nb_epsiodes) as t:
                     'Episode {}, Reward:{}'.format(
                         episode, np.sum(episode_reward_history)))
                 t.set_postfix(episode_reward=np.sum(episode_reward_history))
+                if episode > 3:
+                    agent.train()
+                    agent.update_target_soft()
                 step_history.append(step)
                 break
 

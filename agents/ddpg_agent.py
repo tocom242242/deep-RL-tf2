@@ -8,6 +8,7 @@ class DDPGAgent():
     def __init__(self,
                  action_noise=None,
                  training=True,
+                 epochs=32,
                  gamma=.99,
                  memory=None,
                  memory_interval=1,
@@ -39,6 +40,7 @@ class DDPGAgent():
         self.target_critic = target_critic
         self.train_interval = train_interval
         self.update_interval = update_interval
+        self.epochs = epochs
 
         self.loss_fn = loss_fn
         self.critic_optimizer = optimizer
@@ -58,39 +60,36 @@ class DDPGAgent():
         self.observation = self.obs_processor(observation)
 
         if self.training and reward is not None:
-            if self.step % self.memory_interval == 0:
-                self.memory.append(self.prev_observation,
-                                   self.recent_action_id,
-                                   reward,
-                                   observation,
-                                   terminal=is_terminal)
-            self._experience_replay()
+            self.memory.append(self.prev_observation,
+                               self.recent_action_id,
+                               reward,
+                               observation,
+                               terminal=is_terminal)
 
         self.step += 1
 
+    def train(self):
+        for epoch in range(self.epochs):
+            self._experience_replay()
+
     def _experience_replay(self):
-        if self.step > self.warmup_steps \
-                and self.step % self.train_interval == 0:
+        state0_batch, action_batch, reward_batch, state1_batch, terminal_batch = self.memory.sample(
+            self.batch_size)
 
-            state0_batch, action_batch, reward_batch, state1_batch, terminal_batch = self.memory.sample(
-                self.batch_size)
+        reward_batch = reward_batch.reshape(-1, 1)
+        terminal_batch = terminal_batch.reshape(-1, 1)
 
-            reward_batch = reward_batch.reshape(-1, 1)
-            terminal_batch = terminal_batch.reshape(-1, 1)
+        self._train_critic(
+            state0_batch,
+            action_batch,
+            reward_batch,
+            state1_batch)
+        self._train_actor(
+            state0_batch,
+            action_batch,
+            reward_batch,
+            state1_batch)
 
-            self._train_critic(
-                state0_batch,
-                action_batch,
-                reward_batch,
-                state1_batch)
-            self._train_actor(
-                state0_batch,
-                action_batch,
-                reward_batch,
-                state1_batch)
-
-        # soft update
-        self._soft_update_target_model()
 
     # @tf.function
     def _train_critic(
@@ -131,7 +130,7 @@ class DDPGAgent():
         self.actor_optimizer.apply_gradients(
             zip(actor_grad, self.actor.trainable_variables))
 
-    def _soft_update_target_model(self):
+    def update_target_soft(self):
         target_critic_weights = np.array(self.target_critic.get_weights())
         critic_weights = np.array(self.critic.get_weights())
         new_weight = (1. - self.update_interval) * target_critic_weights \
