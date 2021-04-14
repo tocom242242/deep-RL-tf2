@@ -1,6 +1,7 @@
 ﻿import numpy as np
 import tensorflow as tf
 import copy
+import datetime
 
 
 class DRQNAgent():
@@ -52,7 +53,6 @@ class DRQNAgent():
         self.step = 0
 
         self.train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
-        import datetime
         self.train_log_dir = train_log_dir
         self.train_summary_writer = train_summary_writer
 
@@ -71,6 +71,7 @@ class DRQNAgent():
     def observe(self, observation, reward=None, is_terminal=None):
         self.prev_observation = copy.deepcopy(self.observation)
         self.observation = observation
+        self.step += 1
 
     def record_episode(self, episode):
         self.memory.append(episode)
@@ -78,8 +79,6 @@ class DRQNAgent():
     def train(self):
         for epoch in range(self.epochs):
             self._experience_replay()
-
-        self.step += 1
 
     def update_target_hard(self):
         self.target_model.set_weights(self.model.get_weights())
